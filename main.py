@@ -7,16 +7,11 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Messa
 from google.cloud import speech
 from bs4 import BeautifulSoup
 
-
-#export GOOGLE_APPLICATION_CREDENTIALS="aqueous-nuance-356121-b7060fa1cc28.json"
-
 TOKEN = config.TOKEN
 PASS = config.PASS
 SPECIAL_USERS = config.SPECIAL_USERS
 
-
 HELLO_TEXT = "Greeting. The bot will try to translate audio you sent to the selected language.  This is the DEMO version and functionality is password protected. Please enter a password to proceed:"
-
 
 def get_translation_from_slovnik (key):
     import requests
