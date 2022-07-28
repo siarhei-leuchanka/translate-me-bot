@@ -48,12 +48,18 @@ async def media(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for i,y in translated_text:
             text_to_send += i + " - " + y + "\n"
 
-
         await context.bot.send_message(
             chat_id = update.effective_chat.id,
             parse_mode= "Markdown",
             text = "You entered *{}* and here what I found for you: \n{}".format(text_to_translate,text_to_send)
             )
+        
+        #### storing it in persistence layer to access later
+        #checking for dictionary if it is there
+        if 'history' not in context.user_data:
+            context.user_data["history"] = {}
+        context.user_data["history"][text_to_translate] = text_to_send
+
     else:
         await context.bot.send_message(
                 chat_id=update.effective_chat.id, 
