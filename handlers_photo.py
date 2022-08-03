@@ -6,9 +6,7 @@ from PIL import Image
 import numpy as np
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import (ContextTypes)
-
-#temporary import from media handler before refactoring
-import handler_media
+import translator as tr
 
 def recognize_text (image_binary, preprocess_options):    
     image = np.asarray (image_binary, dtype="uint8")
@@ -37,7 +35,7 @@ def recognize_text (image_binary, preprocess_options):
         print("That's it man")
         return None
     
-    Image.fromarray(output).show()
+    #Image.fromarray(output).show() # to show image on server
 
     # Adding custom options
     custom_config = r'-l ces --oem 3 --psm 6'
@@ -59,7 +57,6 @@ markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
 
 async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id in config.SPECIAL_USERS:
-        print("hey!")
         photo = await context.bot.get_file(update.message.photo[-1].file_id)  
         photo = await photo.download_as_bytearray() 
         context.user_data["photo"] = photo #storing photo in memory to come back again and try once more with pre-processing if any issues with OCR
@@ -77,23 +74,18 @@ async def improve_photo (update: Update, context: ContextTypes.DEFAULT_TYPE):
         if update.message.text == "Yes":
             output_text = context.user_data["text_from_photo"]["text"][-1]
             #### here we go with translation ####
-            translated_text = handler_media.parse_response(handler_media.get_translation_from_slovnik( output_text ))
+            translated_text = tr.Translator(output_text).get()
             print("UserID: {}, has requested {} and get response {}".format(update.effective_user.id, output_text, translated_text ))
             
-            #### Preparing text to send ####
-            text_to_send = ""
-            for i,y in translated_text:
-                text_to_send += i + " - " + y + "\n"
-
             await context.bot.send_message(
                 chat_id = update.effective_chat.id,
                 parse_mode= "Markdown",
-                text = "You requested *{}* and here what I found for you: \n{}".format(output_text,text_to_send)
+                text = "You requested *{}* and here what I found for you: \n{}".format(output_text, translated_text)
                 )
             #checking for dictionary if it is there
             if 'history' not in context.user_data:
                 context.user_data["history"] = {}
-            context.user_data["history"][output_text] = text_to_send    
+            context.user_data["history"][output_text] = translated_text    
 
             #removing all temporary data
             context.user_data["text_from_photo"].clear()
