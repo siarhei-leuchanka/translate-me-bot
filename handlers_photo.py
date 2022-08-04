@@ -65,7 +65,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(
             chat_id = update.effective_chat.id,
             text = output_text + "\n" + "Is this what you wanted?",
-            reply_markup=markup
+            reply_markup = markup
         )
         return CHOICE
 
@@ -73,8 +73,13 @@ async def improve_photo (update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id in config.SPECIAL_USERS:
         if update.message.text == "Yes":
             output_text = context.user_data["text_from_photo"]["text"][-1]
-            #### here we go with translation ####
-            translated_text = tr.Translator(output_text).get()
+
+            # Translating text from Slovink.cz
+            translation_routine = tr.Translator(output_text)            
+            translated_text = translation_routine.get()    
+            # update persistence
+            translation_routine.update_persistence(update, context)
+
             print("UserID: {}, has requested {} and get response {}".format(update.effective_user.id, output_text, translated_text ))
             
             await context.bot.send_message(
@@ -82,10 +87,6 @@ async def improve_photo (update: Update, context: ContextTypes.DEFAULT_TYPE):
                 parse_mode= "Markdown",
                 text = "You requested *{}* and here what I found for you: \n{}".format(output_text, translated_text)
                 )
-            #checking for dictionary if it is there
-            if 'history' not in context.user_data:
-                context.user_data["history"] = {}
-            context.user_data["history"][output_text] = translated_text    
 
             #removing all temporary data
             context.user_data["text_from_photo"].clear()
@@ -115,8 +116,7 @@ async def improve_photo (update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 return CHOICE
 
-async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    
+async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:    
     #removing all temporary data
     context.user_data["text_from_photo"].clear()
     context.user_data["photo"] = ""

@@ -1,5 +1,7 @@
 import requests   
 from bs4 import BeautifulSoup
+from telegram.ext import ContextTypes
+from telegram import Update
 
 class Translator:
     limit = 15
@@ -25,13 +27,20 @@ class Translator:
             self.translation_dict.append((item.find(class_ = "l").get_text(), item.find(class_ = "r").get_text()))
         return self.translation_dict    
 
-    def _format_translation(self):        
-        for i,y in self.translation_dict:
-            self.formatted_text += i + " - " + y + "\n"
+    def _format_translation(self, show_from, show_by):
+        self.formatted_text = ""
+        for l,r in self.translation_dict[show_from:show_by]:
+            self.formatted_text += l + " - " + r + "\n"
         return self.formatted_text
-
-    def get(self):
+        
+    def get(self, show_from = 0, show_by = limit):
         self._request_translation()
-        self._parse()        
-        return self._format_translation()
+        self._parse()                
+        return self._format_translation(show_from, show_by)
 
+    def update_persistence(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """run get or update formatted_text with data to add into persistence"""
+        if 'history' not in context.user_data:
+            context.user_data["history"] = {}
+        context.user_data["history"][self.text] = self._format_translation(0, self.limit)
+        context.user_data["temp_key_for_translation"] = self.text
