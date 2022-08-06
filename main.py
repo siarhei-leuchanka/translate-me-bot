@@ -6,7 +6,7 @@ from xml.sax.handler import feature_namespaces
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ConversationHandler, filters, PicklePersistence
 from handler_unlock import unlock
 from handler_start import start
-from handler_media import media
+import handler_media
 
 ####### Setting up logging #######
 logging.basicConfig(
@@ -32,7 +32,7 @@ async def debug(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == '__main__':
     application = ApplicationBuilder().token(config.TOKEN).persistence(persistence=my_persistence).build()
 
-    conv_handler = ConversationHandler(        
+    photo_conv_handler = ConversationHandler(        
         entry_points=[MessageHandler(filters.PHOTO, handlers_photo.photo)],
         states={
             handlers_photo.CHOICE: [
@@ -43,13 +43,26 @@ if __name__ == '__main__':
         name = "photo_conversation",
         persistent  =   True
     ) 
-    
-    application.add_handler(conv_handler)
+
+    #application.add_handler(MessageHandler(filters.VOICE, media))
+    media_conv_handler = ConversationHandler(        
+        entry_points=[MessageHandler(filters.VOICE, handler_media.media)],
+        states={
+            handler_media.CHOICE: [
+                MessageHandler(filters.Regex("^(More)$"), handler_media.media_more)
+            ],
+        },
+        fallbacks=[MessageHandler(filters.Regex("^(Done)$"), handler_media.media_done)],
+        name = "voice_conversation",
+        persistent  =   True
+    )     
+
+    application.add_handler(photo_conv_handler)
+    application.add_handler(media_conv_handler)
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CommandHandler('debug', debug))    
     application.add_handler(MessageHandler(filters.Text(), unlock))
-    application.add_handler(MessageHandler(filters.VOICE, media))
-        
+
     
     application.run_polling()
 ####### ***************** #######   
