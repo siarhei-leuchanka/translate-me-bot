@@ -43,16 +43,19 @@ def recognize_text (image_binary, preprocess_options):
     
     return text
 
-CHOICE = 0
+CHOICE, MORE = 0,1
 
 #### Preparing UI ####
-
 reply_keyboard = [
     ["Yes", "No, Try Again"],    
     ["Done"],
-]
+    ]
 markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
 
+more_keyboard = [
+    ["More", "Done"],
+]
+more_markup = ReplyKeyboardMarkup(more_keyboard, one_time_keyboard=True)
 #### ************ #####
 
 async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -76,7 +79,7 @@ async def improve_photo (update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             # Translating text from Slovink.cz
             translation_routine = tr.Translator(output_text)            
-            translated_text = translation_routine.get()    
+            translated_text = translation_routine.get(0,6)    
             # update persistence
             translation_routine.update_persistence(update, context)
 
@@ -84,14 +87,15 @@ async def improve_photo (update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             await context.bot.send_message(
                 chat_id = update.effective_chat.id,
-                parse_mode= "Markdown",
-                text = "You requested *{}* and here what I found for you: \n{}".format(output_text, translated_text)
-                )
+                #parse_mode= "Markdown",
+                text = "You requested *{}* and here what I found for you: \n{}".format(output_text, translated_text),
+                reply_markup = more_markup
+            )
 
             #removing all temporary data
             context.user_data["text_from_photo"].clear()
             context.user_data["photo"] = ""
-            return -1 # -1 To end conversation.
+            return MORE
 
         elif update.message.text == "No, Try Again":            
             context.user_data["text_from_photo"]["preprocess"] = context.user_data["text_from_photo"]["preprocess"] + 1                      
@@ -115,6 +119,16 @@ async def improve_photo (update: Update, context: ContextTypes.DEFAULT_TYPE):
                     reply_markup=markup
                 )
                 return CHOICE
+
+async def photo_more_translation(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    temp_key_for_translation = context.user_data["temp_key_for_translation"]
+
+    await context.bot.send_message(
+            chat_id = update.effective_chat.id,
+            parse_mode= "Markdown",
+            text = "More fore *{}* : \n{}".format(temp_key_for_translation,   "\n".join(context.user_data["history"][temp_key_for_translation].split('\n')[6:])            )
+            )
+    return -1
 
 async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:    
     #removing all temporary data
