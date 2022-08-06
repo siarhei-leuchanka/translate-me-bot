@@ -38,6 +38,9 @@ if __name__ == '__main__':
             handlers_photo.CHOICE: [
                 MessageHandler(filters.Regex("^(Yes|No, Try Again)$"), handlers_photo.improve_photo)
             ],
+            handlers_photo.MORE: [
+                MessageHandler(filters.Regex("^(More)$"), handlers_photo.photo_more_translation)
+            ]
         },
         fallbacks=[MessageHandler(filters.Regex("^(Done)$"), handlers_photo.done)],
         name = "photo_conversation",
@@ -65,4 +68,4 @@ if __name__ == '__main__':
 
     
     application.run_polling()
-####### ***************** #######   
+####### ***************** #######
