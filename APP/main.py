@@ -19,6 +19,7 @@ async def main() -> None:
         level=logging.DEBUG
     )
     ####### ***************** #######    
+
     my_persistence = PicklePersistence(filepath = 'file_persistence')
     application = ApplicationBuilder().token(config.TOKEN).updater(None).persistence(persistence=my_persistence).build()
 
@@ -38,14 +39,12 @@ async def main() -> None:
         persistent  =   True
     )     
 
-        # adding handlers
+    # adding handlers
     application.add_handler(media_conv_handler)
     application.add_handler(CommandHandler('start', start))
     application.add_handler(MessageHandler(filters.Text(), unlock))
             
-        # Start and run the application
-
-    
+    # Start and run the application    
     async with application:
         await application.start()
         # when some shutdown mechanism is triggered:
@@ -55,10 +54,5 @@ webserver = Flask(__name__)
 
 @webserver.route("/", methods = ['GET', 'POST'])
 def index():
-
     asyncio.run(main())    
     return "", http.HTTPStatus.NO_CONTENT
-
-
-
-#curl "https://api.telegram.org/bot756196391:AAFYdPpBvbKnv2CMRxV0ye5XdPnSeE8Dbds/setWebhook?url=https://app-codbj3dbba-ey.a.run.app"
