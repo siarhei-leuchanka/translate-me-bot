@@ -2,10 +2,10 @@ from telegram import Update
 import config
 import cv2
 import pytesseract
-from PIL import Image
+#from PIL import Image only needed to see image when debugging
 import numpy as np
 from telegram import ReplyKeyboardMarkup, Update
-from telegram.ext import (ContextTypes)
+from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, filters
 import translator as tr
 
 def recognize_text (image_binary, preprocess_options):    
@@ -136,3 +136,19 @@ async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["photo"] = ""
 
     return -1 # handle done for now
+
+#assembling conversation handler
+photo_conv_handler = ConversationHandler(        
+    entry_points=[MessageHandler(filters.PHOTO, photo)],
+    states={
+        CHOICE: [
+            MessageHandler(filters.Regex("^(Yes|No, Try Again)$"), improve_photo)
+        ],
+        MORE: [
+            MessageHandler(filters.Regex("^(More)$"), photo_more_translation)
+        ]
+    },
+    fallbacks=[MessageHandler(filters.Regex("^(Done)$"), done)],
+    name = "photo_conversation",
+    persistent  =   True
+)

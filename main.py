@@ -3,69 +3,72 @@ import logging
 from multiprocessing import context
 import config
 from xml.sax.handler import feature_namespaces
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ConversationHandler, filters, PicklePersistence
+from telegram import Update 
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ConversationHandler, filters, PicklePersistence, ContextTypes
 from handler_unlock import unlock
 from handler_start import start
-import handler_media
-
-####### Setting up logging #######
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-####### ***************** #######
-
-####### Importing Conversation handler for Photo processing #######
 import handlers_photo
+import handler_media
+from flask import Flask, request
+import asyncio
+import http
+import config
 
-
-from telegram import Update 
-from telegram.ext import ContextTypes 
-
-my_persistence = PicklePersistence(filepath = 'my_file')
-
-async def debug(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(context.user_data)
-    print("Here am I!")
-
-####### Starting the bot #######
-if __name__ == '__main__':
-    application = ApplicationBuilder().token(config.TOKEN).persistence(persistence=my_persistence).build()
-
-    photo_conv_handler = ConversationHandler(        
-        entry_points=[MessageHandler(filters.PHOTO, handlers_photo.photo)],
-        states={
-            handlers_photo.CHOICE: [
-                MessageHandler(filters.Regex("^(Yes|No, Try Again)$"), handlers_photo.improve_photo)
-            ],
-            handlers_photo.MORE: [
-                MessageHandler(filters.Regex("^(More)$"), handlers_photo.photo_more_translation)
-            ]
-        },
-        fallbacks=[MessageHandler(filters.Regex("^(Done)$"), handlers_photo.done)],
-        name = "photo_conversation",
-        persistent  =   True
-    ) 
-
-    #application.add_handler(MessageHandler(filters.VOICE, media))
-    media_conv_handler = ConversationHandler(        
-        entry_points=[MessageHandler(filters.VOICE, handler_media.media)],
-        states={
-            handler_media.CHOICE: [
-                MessageHandler(filters.Regex("^(More)$"), handler_media.media_more)
-            ],
-        },
-        fallbacks=[MessageHandler(filters.Regex("^(Done)$"), handler_media.media_done)],
-        name = "voice_conversation",
-        persistent  =   True
-    )     
-
-    application.add_handler(photo_conv_handler)
-    application.add_handler(media_conv_handler)
-    application.add_handler(CommandHandler('start', start))
-    application.add_handler(CommandHandler('debug', debug))    
-    application.add_handler(MessageHandler(filters.Text(), unlock))
-
+async def main() -> None:
+    ####### Setting up logging #######
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.DEBUG
+    )
     
+    # Creating a file to store data between requests
+    my_persistence = PicklePersistence(filepath = 'file_persistence')
+
+    # If webhook is True then we assume it is in container and it requires custom web server, thus we need custom UDATER, if not then run with built in UDPATER 
+    application = ApplicationBuilder().token(config.TOKEN).updater(None).persistence(persistence=my_persistence).build()
+    await application.update_queue.put(
+            Update.de_json(data = request.get_json(force=True), bot=application.bot)
+    )
+    
+    # adding handlers
+    application.add_handler(handlers_photo.photo_conv_handler)
+    application.add_handler(handler_media.media_conv_handler)
+    application.add_handler(CommandHandler('start', start))
+    application.add_handler(MessageHandler(filters.Text(), unlock))
+    
+    # Start and run the application    
+    async with application:
+        await application.start()
+        # when some shutdown mechanism is triggered:
+        await application.stop()
+
+##########################################
+# custom web server when webhook is enabled
+webserver = Flask(__name__)
+@webserver.route("/", methods = ['GET', 'POST'])
+def index():
+    asyncio.run(main())    
+    return "", http.HTTPStatus.NO_CONTENT
+
+##########################################
+# We ignore FLASK if Webhook is set up and starting in debug mode for local testing using getUdpates
+# Checking Webhook parameter and starting application in getUpdates mode. 
+if config.WEBHOOK == False:
+       ####### Setting up logging #######
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.DEBUG
+    )
+    
+    # Creating a file to store data between requests
+    my_persistence = PicklePersistence(filepath = 'file_persistence')
+    application = ApplicationBuilder().token(config.TOKEN).persistence(persistence=my_persistence).build()        
+    
+    # adding handlers
+    application.add_handler(handlers_photo.photo_conv_handler)
+    application.add_handler(handler_media.media_conv_handler)
+    application.add_handler(CommandHandler('start', start))
+    application.add_handler(MessageHandler(filters.Text(), unlock))
+    
+    # Start and run the application using getUpdates mode. For local usage. 
     application.run_polling()
-####### ***************** #######

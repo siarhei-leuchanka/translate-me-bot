@@ -1,8 +1,10 @@
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import ContextTypes 
+from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, filters 
 from google.cloud import speech
 import config
 import translator as tr 
+
+
 
 CHOICE = 0
 #### Preparing UI ####
@@ -67,3 +69,19 @@ async def media_more(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def media_done(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     return -1
+
+
+#assembking conversation handler
+
+media_conv_handler = ConversationHandler(        
+        entry_points=[MessageHandler(filters.VOICE, media)],
+        states={
+            CHOICE: [
+                MessageHandler(filters.Regex("^(More)$"), media_more)
+            ],
+        },
+        fallbacks=[MessageHandler(filters.Regex("^(Done)$"), media_done)],
+        name = "voice_conversation",
+        persistent  =   True
+    )
+
