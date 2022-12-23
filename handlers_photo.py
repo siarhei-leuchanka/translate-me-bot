@@ -1,5 +1,7 @@
 from telegram import Update
-import config
+from dotenv import load_dotenv
+import os
+load_dotenv()
 import cv2
 import pytesseract
 #from PIL import Image only needed to see image when debugging
@@ -59,7 +61,7 @@ more_markup = ReplyKeyboardMarkup(more_keyboard, one_time_keyboard=True)
 #### ************ #####
 
 async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id in config.SPECIAL_USERS:
+    if update.effective_user.id in os.environ['SPECIAL_USERS']:
         photo = await context.bot.get_file(update.message.photo[-1].file_id)  
         photo = await photo.download_as_bytearray() 
         context.user_data["photo"] = photo #storing photo in memory to come back again and try once more with pre-processing if any issues with OCR
@@ -73,7 +75,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return CHOICE
 
 async def improve_photo (update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id in config.SPECIAL_USERS:
+    if update.effective_user.id in os.environ['SPECIAL_USERS']:
         if update.message.text == "Yes":
             output_text = context.user_data["text_from_photo"]["text"][-1]
 
@@ -126,7 +128,7 @@ async def photo_more_translation(update: Update, context: ContextTypes.DEFAULT_T
     await context.bot.send_message(
             chat_id = update.effective_chat.id,
             parse_mode= "Markdown",
-            text = "More fore *{}* : \n{}".format(temp_key_for_translation,   "\n".join(context.user_data["history"][temp_key_for_translation].split('\n')[6:])            )
+            text = "More fore *{}* : \n{}".format(temp_key_for_translation,   "\n".join(context.user_data["history"][temp_key_for_translation].split('\n')[6:]))
             )
     return -1
 
